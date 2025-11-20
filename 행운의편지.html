@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>축 퇴근! 🎉</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: system-ui, sans-serif;
+      background: #000;
+    }
+
+    #fireworks {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle at bottom, #001020, #000000);
+      z-index: 0;
+    }
+
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+    }
+
+    .popup-content {
+      background: #ffffff;
+      border-radius: 18px;
+      padding: 28px 36px;
+      width: 80%;
+      max-width: 360px;
+      text-align: center;
+      box-shadow: 0 20px 40px rgba(0,0,0,.4);
+    }
+
+    .popup-content button {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 999px;
+      font-size: 1.1rem;
+      cursor: pointer;
+      background: linear-gradient(135deg, #ff8f00, #ffe600);
+      font-weight: bold;
+      box-shadow: 0 8px 16px rgba(0,0,0,.25);
+    }
+
+    #cheerText {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: clamp(3.5rem, 9vw, 6.5rem);
+      font-weight: 900;
+      color: #fffbb4;
+      text-shadow:
+        0 0 18px rgba(255, 200, 0, 1),
+        0 0 40px rgba(255, 100, 0, 1),
+        0 0 90px rgba(255, 0, 0, 1);
+      opacity: 0;
+      transform: scale(.9);
+      pointer-events: none;
+      transition: .7s ease;
+      z-index: 5;
+    }
+
+    #cheerText.show {
+      opacity: 1;
+      transform: scale(1);
+    }
+  </style>
+</head>
+<body>
+  <canvas id="fireworks"></canvas>
+
+  <!-- 팝업 -->
+  <div class="overlay" id="popup">
+    <div class="popup-content">
+      <h2>오늘도 고생하셨습니다 🍻</h2>
+      <p>긴장하고 버튼을 누르세요</p>
+      <button id="cheerBtn">발사 🚀</button>
+    </div>
+  </div>
+
+  <!-- “축 퇴근!” -->
+  <div id="cheerText">축 퇴근!</div>
+
+  <script>
+    const canvas = document.getElementById("fireworks");
+    const ctx = canvas.getContext("2d");
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    resizeCanvas();
+    window.addEventListener("resize", resizeCanvas);
+
+    const particles = [];
+    const gravity = 0.05;
+    const friction = 0.99;
+
+    function random(min, max) {
+      return Math.random() * (max - min) + min;
+    }
+
+    function createFirework(x, y) {
+      const count = 80;
+      for (let i = 0; i < count; i++) {
+        const angle = (Math.PI * 2 * i) / count;
+        const speed = random(1.5, 5);
+        particles.push({
+          x,
+          y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          alpha: 1,
+          radius: random(1.5, 3.5),
+          color: `hsl(${Math.floor(Math.random() * 360)}, 100%, 60%)`
+        });
+      }
+    }
+
+    function updateParticles() {
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.vx *= friction;
+        p.vy = p.vy * friction + gravity;
+        p.x += p.vx;
+        p.y += p.vy;
+        p.alpha -= 0.01;
+        if (p.alpha <= 0) particles.splice(i, 1);
+      }
+    }
+
+    function drawParticles() {
+      ctx.globalCompositeOperation = "lighter";
+      particles.forEach(p => {
+        ctx.globalAlpha = p.alpha;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        ctx.fillStyle = p.color;
+        ctx.fill();
+      });
+      ctx.globalAlpha = 1;
+    }
+
+    function clearCanvas() {
+      ctx.globalCompositeOperation = "destination-out";
+      ctx.fillStyle = "rgba(0,0,0,0.3)";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.globalCompositeOperation = "source-over";
+    }
+
+    let isAnimating = false;
+    function animate() {
+      if (!isAnimating) return;
+      clearCanvas();
+      updateParticles();
+      drawParticles();
+      requestAnimationFrame(animate);
+    }
+
+    function speak() {
+      if (!("speechSynthesis" in window)) return;
+      const utter = new SpeechSynthesisUtterance("축! 퇴근!!");
+      utter.lang = "ko-KR";
+      window.speechSynthesis.speak(utter);
+    }
+
+    function startFireworksShow() {
+      isAnimating = true;
+      animate();
+      const interval = setInterval(() => {
+        createFirework(
+          random(canvas.width * .1, canvas.width * .9),
+          random(canvas.height * .1, canvas.height * .5)
+        );
+      }, 250);
+
+      setTimeout(() => {
+        clearInterval(interval);
+        setTimeout(() => (isAnimating = false), 2000);
+      }, 6000);
+    }
+
+    const popup = document.getElementById("popup");
+    const cheerBtn = document.getElementById("cheerBtn");
+    const cheerText = document.getElementById("cheerText");
+
+    cheerBtn.addEventListener("click", () => {
+      popup.style.display = "none";
+      cheerText.classList.add("show");
+      speak();
+      startFireworksShow();
+    });
+
+    clearCanvas();
+  </script>
+</body>
+</html>
